@@ -1,0 +1,25 @@
+{
+	"name": "WS dev environment",
+	"context": ".",
+	"dockerFile": "Dockerfile",
+	"runArgs": [
+		"--cap-add=SYS_PTRACE",
+		"--security-opt",
+		"seccomp=unconfined"
+	],
+	"mounts": [
+		"type=bind,source=/etc/timezone,target=/etc/timezone,readonly",
+		"type=bind,source=/etc/localtime,target=/etc/localtime,readonly"
+	],
+	"settings": {
+		"terminal.integrated.shell.linux": "/bin/sh",
+		"go.gopath": "/go",
+		"files.trimTrailingWhitespace": true,
+		"files.trimFinalNewlines": true,
+		"files.insertFinalNewline": true
+	},
+	"extensions": [
+		"ms-vscode.go",
+		"redhat.vscode-yaml"
+	]
+}
