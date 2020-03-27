@@ -5,7 +5,7 @@ Go package to organize pool of workers
 ## Quick start:
 1. Import package:
 ```
-import "gitlab.com/egnd/go-workers-pool"
+import "gitlab.com/egnd/wpool"
 ```
 2. Create and start pool:
 ```
