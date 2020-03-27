@@ -31,3 +31,19 @@ for i := 1; i <= 100; i++ {
 ```
 pool.Wait()
 ```
+
+### Hints:
+1. Decorating jobs:
+```
+// Prepend job logic. Job will be executed only if error is nil.
+worker.PrependJob(func(job JobInterface) (err error) {
+    log.Print("prepend " + job.Name() + " at " + worker.Name())
+    return
+})
+
+// Append job logic.
+worker.AppendJob(func(job JobInterface) (err error) {
+    log.Print("append " + job.Name() + " at " + worker.Name())
+    return
+})
+```
