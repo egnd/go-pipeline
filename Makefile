@@ -13,10 +13,7 @@ help:
 
 ########################################################################################################################
 
-test: ## test package
-	go test
-
-docker-test: ## test package inside docker container
+test: ## test package inside docker container
 	@clear
 	docker build --force-rm --tag go-workers --file Dockerfile .
 	docker run --rm --interactive --workdir "/src" --volume "$$(pwd)":"/src":rw go-workers sh -c "make test"

@@ -1,45 +1,61 @@
 package wpool
 
-import "log"
+import (
+	"sync"
+)
 
 type WorkerInterface interface {
-	Listen(pipeline chan chan JobInterface)
-	Stop()
+	Name() string
+	Execute(job JobInterface) WorkerInterface
+	Stop() WorkerInterface
 }
 
 type Worker struct {
 	WorkerInterface
-	pipe chan JobInterface
+	name string
+	wg   *sync.WaitGroup
 	stop chan bool
+	once sync.Once
 }
 
-func (this *Worker) Listen(pipeline chan chan JobInterface) {
-	this.stop = make(chan bool)
-	this.pipe = make(chan JobInterface)
+func (this *Worker) Name() string {
+	return this.name
+}
+
+func (this *Worker) Execute(job JobInterface) WorkerInterface {
 	go func() {
-		log.Println("worker start")
+		defer this.wg.Done()
+		if job != nil {
+			job.Run()
+		}
+	}()
+	return this
+}
+
+func (this *Worker) Stop() WorkerInterface {
+	this.stop <- true
+	this.once.Do(func() {
+		close(this.stop)
+	})
+	return this
+}
+
+func NewWorker(name string, pool PoolInterface) (worker WorkerInterface) {
+	done := make(chan bool)
+	worker = &Worker{
+		name: name,
+		wg:   pool.WorkersGroup(),
+		stop: done,
+	}
+	go func() {
 		for {
 			select {
-			case <-this.stop:
-				log.Println("worker stop")
-				return
-			case job := <-this.pipe:
-				log.Println("worker execute job " + job.Name())
-				this.runJob(job)
+			case <-done:
+				break
 			default:
-				log.Println("worker waiting")
-				pipeline <- this.pipe
+				pool.WorkersChannel() <- worker
 			}
 		}
 	}()
-}
-
-func (this *Worker) Stop() {
-	this.stop <- true
-	close(this.pipe)
-	close(this.stop)
-}
-
-func (this *Worker) runJob(job JobInterface) {
-	job.Run()
+	return
 }
