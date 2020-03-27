@@ -11,14 +11,14 @@ type JobInterface interface {
 	Run() error
 }
 
-type JobFunction func(job JobInterface) error
+type JobCallback func(job JobInterface) error
 
 type Job struct {
 	JobInterface
 	name     string
 	err      error
 	duration time.Duration
-	callback JobFunction
+	callback JobCallback
 }
 
 func (this *Job) Name() string {
@@ -35,15 +35,13 @@ func (this *Job) Duration() time.Duration {
 
 func (this *Job) Run() (err error) {
 	start := time.Now()
-	this.err = this.logic()
-	this.duration = time.Since(start)
+	defer func() {
+		this.duration = time.Since(start)
+	}()
+	this.err = this.callback(this)
 	return this.Error()
 }
 
-func (this *Job) logic() error {
-	return this.callback(this)
-}
-
-func NewJob(name string, jobLogic JobFunction) JobInterface {
+func NewJob(name string, jobLogic JobCallback) JobInterface {
 	return &Job{name: name, callback: jobLogic}
 }

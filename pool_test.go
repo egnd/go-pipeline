@@ -41,6 +41,14 @@ func runPool(workersCnt int, jobsCnt int, debug bool, jobDelay time.Duration) {
 			log.Printf("add worker #%d", i)
 		}
 		worker := NewWorker(fmt.Sprintf("worker-%d", i), pool)
+		worker.PrependJob(func(job JobInterface) (err error) {
+			log.Print("prepend " + job.Name() + " at " + worker.Name())
+			return
+		})
+		worker.AppendJob(func(job JobInterface) (err error) {
+			log.Print("append " + job.Name() + " at " + worker.Name())
+			return
+		})
 		pool.RegisterWorker(worker)
 	}
 	for i := 1; i <= jobsCnt; i++ {
