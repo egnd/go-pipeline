@@ -1,7 +1,33 @@
-# Go workers pool
+# wpool - workers pool in go
 
 Goroutines management pool
 
 ## Quick start:
-1. @TODO:
-2. @TODO:
+1. Import package:
+```
+import "gitlab.com/egnd/go-workers-pool"
+```
+2. Create and start pool:
+```
+pool := wpool.NewPool().Start()
+```
+3. Run workers and attach them to pool:
+```
+for i := 1; i <= 5; i++ {
+    worker := wpool.NewWorker(fmt.Sprintf("worker-%d", i), pool)
+    pool.RegisterWorker(worker)
+}
+```
+4. Add jobs to pool:
+```
+for i := 1; i <= 100; i++ {
+    pool.AddJob(wpool.NewJob(fmt.Sprintf("job-%d", i), func(job JobInterface) (err error) {
+        // job code
+        return
+    }))
+}
+```
+5. Waiting while workers executes all jobs
+```
+pool.Wait()
+```

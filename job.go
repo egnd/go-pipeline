@@ -11,7 +11,7 @@ type JobInterface interface {
 	Run() error
 }
 
-type JobFunction func() error
+type JobFunction func(job JobInterface) error
 
 type Job struct {
 	JobInterface
@@ -40,8 +40,8 @@ func (this *Job) Run() (err error) {
 	return this.Error()
 }
 
-func (this *Job) logic() (err error) {
-	return this.callback()
+func (this *Job) logic() error {
+	return this.callback(this)
 }
 
 func NewJob(name string, jobLogic JobFunction) JobInterface {

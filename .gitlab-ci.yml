@@ -1,7 +1,7 @@
 stages:
   - checklist
   - test
-  
+
 .checklist:
   image: alpine
   before_script:
@@ -34,7 +34,5 @@ todos:
 test package:
   image: golang:1.13-alpine
   stage: test
-  before_script:
-    - apk add -q make && which make
   script:
-    - make test
+    - go test
