@@ -1,6 +1,6 @@
-# wpool - workers pool in go
+# wpool
 
-Goroutines management pool
+Go package to organize pool of workers
 
 ## Quick start:
 1. Import package:
