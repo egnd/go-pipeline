@@ -37,11 +37,11 @@ mocks: ## Generate mocks
 
 tests: ## Run unit tests
 	@clear && rm -rf coverage && mkdir -p coverage
-	CGO_ENABLED=1 go test -mod=vendor -race -cover -covermode=atomic -coverprofile=coverage/profile.out ./pkg
+	CGO_ENABLED=1 go test -mod=readonly -race -cover -covermode=atomic -coverprofile=coverage/profile.out ./pkg
 
 benchmarks: ## Run benchmarks
 	@clear
-	go test -mod=vendor -benchmem -bench . ./pkg/benchmarks_test.go
+	go test -mod=readonly -benchmem -bench . ./pkg/benchmarks_test.go
 
 coverage: tests ## Check code coveragem
 	go tool cover -func=coverage/profile.out
@@ -49,7 +49,7 @@ coverage: tests ## Check code coveragem
 
 profiling: ## Run unit tests
 	@clear && rm -rf coverage && mkdir -p coverage
-	go test -mod=vendor -cpuprofile=coverage/cpu.prof -memprofile=coverage/mem.prof ./pkg
+	go test -mod=readonly -cpuprofile=coverage/cpu.prof -memprofile=coverage/mem.prof ./pkg
 	go tool pprof -svg coverage/cpu.prof > coverage/cpu.svg
 	go tool pprof -svg coverage/mem.prof > coverage/mem.svg
 
