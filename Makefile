@@ -36,7 +36,7 @@ mocks: ## Generate mocks
 	mockery --all --case=underscore --recursive --outpkg=mocks --output=mocks --dir=./pkg
 
 tests: ## Run unit tests
-	@clear && rm -rf coverage && mkdir -p coverage
+	@rm -rf coverage && mkdir -p coverage
 	CGO_ENABLED=1 go test -mod=readonly -race -cover -covermode=atomic -coverprofile=coverage/profile.out ./pkg
 
 benchmarks: ## Run benchmarks
