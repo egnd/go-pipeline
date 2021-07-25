@@ -42,6 +42,5 @@ jobs:
         with:
           go-version: 1.16
       - uses: actions/checkout@v2
-      - run: export TERM=dumb
-      - run: ln -s .env.dist .env
-      - run: make coverage
+      - run: go test -coverprofile=coverage.txt -covermode=atomic ./pkg
+      - run: bash <(curl -s https://codecov.io/bash)
