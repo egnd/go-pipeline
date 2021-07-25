@@ -8,7 +8,7 @@ type ITask interface {
 	Do() error
 }
 
-// ITask is a task struct.
+// Task is a task struct.
 type Task struct {
 	Title    string
 	Callback func() error

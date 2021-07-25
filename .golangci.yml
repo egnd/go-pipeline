@@ -16,12 +16,6 @@ output:
 linters:
   enable-all: true
   fast: false
-  # disable:
-  #   - goerr113 # @TODO:
-  #   - golint # @TODO:
-  #   - exhaustivestruct # @TODO:
-  #   - gci # @TODO:
-  #   - wrapcheck
 issues:
   exclude-use-default: false
   max-issues-per-linter: 0

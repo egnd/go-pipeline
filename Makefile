@@ -41,7 +41,7 @@ tests: ## Run unit tests
 
 benchmarks: ## Run benchmarks
 	@clear
-	go test -mod=vendor -cpu 1,2,4 -benchmem -bench . ./pkg/benchmarks_test.go
+	go test -mod=vendor -benchmem -bench . ./pkg/benchmarks_test.go
 
 coverage: tests ## Check code coveragem
 	go tool cover -func=coverage/profile.out
