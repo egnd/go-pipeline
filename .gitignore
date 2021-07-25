@@ -1,4 +1,5 @@
-/.vscode/*
-!/.vscode/launch.json
-/debug*
-*.log
+/coverage
+/vendor
+/.env
+.DS_Store
+/pkg.test

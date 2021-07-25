@@ -1,49 +1,8 @@
 # wpool
 
-Go package to organize pool of workers
+Golang package for making a pool of workers.
 
-## Quick start:
-1. Import package:
-```
-import "gitlab.com/egnd/wpool"
-```
-2. Create and start pool:
-```
-pool := wpool.NewPool().Start()
-```
-3. Run workers and attach them to pool:
-```
-for i := 1; i <= 5; i++ {
-    worker := wpool.NewWorker(fmt.Sprintf("worker-%d", i), pool)
-    pool.RegisterWorker(worker)
-}
-```
-4. Add jobs to pool:
-```
-for i := 1; i <= 100; i++ {
-    pool.AddJob(wpool.NewJob(fmt.Sprintf("job-%d", i), func(job JobInterface) (err error) {
-        // job code
-        return
-    }))
-}
-```
-5. Waiting while workers executes all jobs
-```
-pool.Wait()
-```
-
-### Hints:
-1. Decorating jobs:
-```
-// Prepend job logic. Job will be executed only if error is nil.
-worker.PrependJob(func(job JobInterface) (err error) {
-    log.Print("prepend " + job.Name() + " at " + worker.Name())
-    return
-})
-
-// Append job logic.
-worker.AppendJob(func(job JobInterface) (err error) {
-    log.Print("append " + job.Name() + " at " + worker.Name())
-    return
-})
-```
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/egnd/wpool)](https://pkg.go.dev/github.com/egnd/wpool?tab=doc)
+[![Go Report Card](https://goreportcard.com/badge/github.com/egnd/wpool)](https://goreportcard.com/report/github.com/egnd/wpool)
+[![codecov.io](https://codecov.io/github/egnd/wpool/coverage.svg?branch=master)](https://codecov.io/gh/egnd/wpool?branch=master)
+[![Build](https://github.com/egnd/wpool/workflows/Pipeline/badge.svg)](https://github.com/egnd/wpool/actions?query=workflow%3APipeline)
