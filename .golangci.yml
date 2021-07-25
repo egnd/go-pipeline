@@ -8,7 +8,6 @@ run:
   tests: false
   skip-dirs:
     - vendor
-  # modules-download-mode: vendor
 output:
   format: tab
   print-issued-lines: true
