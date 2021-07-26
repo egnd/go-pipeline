@@ -32,16 +32,16 @@ check-master: ## Check for latest master in current branch
 	@echo "All is OK"
 
 mocks: ## Generate mocks
-	@clear && rm -rf mocks && mkdir -p mocks
-	mockery --all --case=underscore --recursive --outpkg=mocks --output=mocks --dir=./pkg
+	@clear && rm -rf mocks
+	mockery
 
 tests: ## Run unit tests
 	@rm -rf coverage && mkdir -p coverage
-	CGO_ENABLED=1 go test -mod=readonly -race -cover -covermode=atomic -coverprofile=coverage/profile.out ./pkg
+	CGO_ENABLED=1 go test -mod=readonly -race -cover -covermode=atomic -coverprofile=coverage/profile.out .
 
 benchmarks: ## Run benchmarks
 	@clear
-	go test -mod=readonly -benchmem -bench . ./pkg/benchmarks_test.go
+	go test -mod=readonly -benchmem -bench . benchmarks_test.go
 
 coverage: tests ## Check code coveragem
 	go tool cover -func=coverage/profile.out
@@ -49,13 +49,13 @@ coverage: tests ## Check code coveragem
 
 profiling: ## Run unit tests
 	@clear && rm -rf coverage && mkdir -p coverage
-	go test -mod=readonly -cpuprofile=coverage/cpu.prof -memprofile=coverage/mem.prof ./pkg
+	go test -mod=readonly -cpuprofile=coverage/cpu.prof -memprofile=coverage/mem.prof .
 	go tool pprof -svg coverage/cpu.prof > coverage/cpu.svg
 	go tool pprof -svg coverage/mem.prof > coverage/mem.svg
 
 lint: ## Lint source code
 	@clear
-	golangci-lint run --color=always --config=.golangci.yml ./pkg
+	golangci-lint run --color=always --config=.golangci.yml *.go
 
 ########################################################################################################################
 

@@ -23,8 +23,8 @@ func (_m *ITask) Do() error {
 	return r0
 }
 
-// Name provides a mock function with given fields:
-func (_m *ITask) Name() string {
+// GetName provides a mock function with given fields:
+func (_m *ITask) GetName() string {
 	ret := _m.Called()
 
 	var r0 string

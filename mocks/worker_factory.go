@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	pkg "github.com/egnd/wpool/pkg"
+	wpool "github.com/egnd/wpool"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -13,15 +13,15 @@ type WorkerFactory struct {
 }
 
 // Execute provides a mock function with given fields: _a0, _a1
-func (_m *WorkerFactory) Execute(_a0 uint, _a1 chan pkg.IWorker) pkg.IWorker {
+func (_m *WorkerFactory) Execute(_a0 uint, _a1 chan wpool.IWorker) wpool.IWorker {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 pkg.IWorker
-	if rf, ok := ret.Get(0).(func(uint, chan pkg.IWorker) pkg.IWorker); ok {
+	var r0 wpool.IWorker
+	if rf, ok := ret.Get(0).(func(uint, chan wpool.IWorker) wpool.IWorker); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(pkg.IWorker)
+			r0 = ret.Get(0).(wpool.IWorker)
 		}
 	}
 

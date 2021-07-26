@@ -1,5 +1,5 @@
-// Package pkg contains structs and functions for making a pool of workers.
-package pkg
+// Package wpool contains structs and functions for making a pool of workers.
+package wpool
 
 import (
 	"sync"

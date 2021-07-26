@@ -1,23 +1,23 @@
-package pkg
+package wpool
 
 import "sync"
 
 // ITask is a task interface.
 type ITask interface {
-	Name() string
+	GetName() string
 	Do() error
 }
 
 // Task is a task struct.
 type Task struct {
-	Title    string
+	Name     string
 	Callback func() error
 	Wg       *sync.WaitGroup
 }
 
-// Name is returning task name.
-func (t *Task) Name() string {
-	return t.Title
+// GetName is returning task name.
+func (t *Task) GetName() string {
+	return t.Name
 }
 
 // Do is executing task logic.

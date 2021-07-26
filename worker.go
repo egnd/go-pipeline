@@ -1,4 +1,4 @@
-package pkg
+package wpool
 
 import (
 	"sync"
@@ -44,7 +44,7 @@ func NewWorker(pipeline chan<- IWorker, logger *zerolog.Logger) IWorker {
 			w.mx.Unlock()
 
 			for task := range w.tasks {
-				w.logger.Debug().Str("task", task.Name()).Msg("new task")
+				w.logger.Debug().Str("task", task.GetName()).Msg("new task")
 
 				err := func() (tErr error) {
 					defer func() {
@@ -61,7 +61,7 @@ func NewWorker(pipeline chan<- IWorker, logger *zerolog.Logger) IWorker {
 					return
 				}()
 				if err != nil {
-					w.logger.Error().Str("task", task.Name()).Err(err).Msg("do")
+					w.logger.Error().Str("task", task.GetName()).Err(err).Msg("do")
 				}
 
 				break
