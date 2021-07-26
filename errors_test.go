@@ -19,3 +19,9 @@ func Test_ErrPanic(t *testing.T) {
 func Test_ErrWrapper(t *testing.T) {
 	assert.EqualValues(t, (&wpool.ErrWrapper{"wrap msg", errors.New("error")}).Error(), "wrap msg: error")
 }
+
+func Test_ErrTaskTimeout(t *testing.T) {
+	assert.EqualValues(t, (&wpool.ErrTaskTimeout{"taskname"}).Error(), "task timeout: taskname")
+	assert.EqualValues(t, (&wpool.ErrTaskTimeout{"taskname"}).Timeout(), true)
+	assert.EqualValues(t, (&wpool.ErrTaskTimeout{"taskname"}).Temporary(), true)
+}
