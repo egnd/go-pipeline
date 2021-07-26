@@ -9,35 +9,34 @@ Golang package for making a pool of workers.
 
 ### Example:
 ```golang
-    logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	// create pool and define worker's factory
-	pool := wpool.NewPool(wpool.PoolCfg{
-		WorkersCnt:   3,
-		TasksBufSize: 10,
-	}, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
-		wLog := logger.With().Uint("worker", num).Logger()
-		return wpool.NewWorker(pipeline, &wLog)
-	}, &logger)
+// create pool and define worker's factory
+pool := wpool.NewPool(wpool.PoolCfg{
+    WorkersCnt:   3,
+    TasksBufSize: 10,
+}, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
+    wLog := logger.With().Uint("worker", num).Logger()
+    return wpool.NewWorker(pipeline, &wLog)
+}, &logger)
+defer pool.Close()
 
-    defer pool.Close()
+// put some tasks to pool
+var wg sync.WaitGroup
+for i := 0; i < 20; i++ {
+    if err := pool.Add(&wpool.Task{Wg: &wg, Name: fmt.Sprint(i),
+        Callback: func(task *wpool.Task) error {
+            // do something here
+            logger.Info().Str("task", task.GetName()).Msg("do task")
+            return nil
+        },
+    }); err != nil {
+        logger.Error().Err(err).Msg("putting task to pool")
+        break
+    }
+    wg.Add(1)
+}
 
-	// put some tasks to pool
-	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
-		if err := pool.Add(&wpool.Task{Wg: &wg, Name: fmt.Sprint(i),
-			Callback: func(task *wpool.Task) error {
-				// do something here
-				logger.Info().Str("task", task.GetName()).Msg("do task")
-				return nil
-			},
-		}); err != nil {
-			logger.Error().Err(err).Msg("putting task to pool")
-			break
-		}
-		wg.Add(1)
-	}
-
-	// wait for tasks to be completed
-	wg.Wait()	
+// wait for tasks to be completed
+wg.Wait()
 ```
