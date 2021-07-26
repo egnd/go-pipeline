@@ -10,6 +10,7 @@ Golang package for making a pool of workers.
 ### Example:
 ```golang
 logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+ctx := context.Background()
 
 // create pool and define worker's factory
 pool := wpool.NewPool(wpool.PoolCfg{
@@ -17,7 +18,7 @@ pool := wpool.NewPool(wpool.PoolCfg{
     TasksBufSize: 10,
 }, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
     wLog := logger.With().Uint("worker", num).Logger()
-    return wpool.NewWorker(pipeline, &wLog)
+    return wpool.NewWorker(ctx, wpool.WorkerCfg{}, pipeline, &wLog)
 }, &logger)
 defer pool.Close()
 
@@ -25,7 +26,7 @@ defer pool.Close()
 var wg sync.WaitGroup
 for i := 0; i < 20; i++ {
     if err := pool.Add(&wpool.Task{Wg: &wg, Name: fmt.Sprint(i),
-        Callback: func(task *wpool.Task) error {
+        Callback: func(tCtx context.Context, task *wpool.Task) error {
             // do something here
             logger.Info().Str("task", task.GetName()).Msg("do task")
             return nil
@@ -36,7 +37,6 @@ for i := 0; i < 20; i++ {
     }
     wg.Add(1)
 }
-
 // wait for tasks to be completed
 wg.Wait()
 ```

@@ -1,17 +1,20 @@
 package wpool
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 // ITask is a task interface.
 type ITask interface {
 	GetName() string
-	Do() error
+	Do(context.Context) error
 }
 
 // Task is a task struct.
 type Task struct {
 	Name     string
-	Callback func(*Task) error
+	Callback func(context.Context, *Task) error
 	Wg       *sync.WaitGroup
 }
 
@@ -21,13 +24,13 @@ func (t *Task) GetName() string {
 }
 
 // Do is executing task logic.
-func (t *Task) Do() error {
+func (t *Task) Do(ctx context.Context) error {
 	if t.Wg != nil {
 		defer t.Wg.Done()
 	}
 
 	if t.Callback != nil {
-		return t.Callback(t)
+		return t.Callback(ctx, t)
 	}
 
 	return nil

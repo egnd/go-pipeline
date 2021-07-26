@@ -1,6 +1,8 @@
 package wpool
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // ErrIsClosed is an error which shows that something is closed for writing.
 type ErrIsClosed struct {
@@ -28,4 +30,23 @@ type ErrWrapper struct {
 
 func (e ErrWrapper) Error() string {
 	return fmt.Sprintf("%s: %s", e.Msg, e.Err.Error())
+}
+
+// ErrTaskTimeout is an error for task execution timeout.
+type ErrTaskTimeout struct {
+	TaskName string
+}
+
+// Timeout shows if is the error a timeout.
+func (e *ErrTaskTimeout) Timeout() bool {
+	return true
+}
+
+// Temporary shows if is the error temporary.
+func (e *ErrTaskTimeout) Temporary() bool {
+	return true
+}
+
+func (e *ErrTaskTimeout) Error() string {
+	return fmt.Sprintf("task timeout: %s", e.TaskName)
 }

@@ -1,7 +1,9 @@
 package wpool
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -15,6 +17,11 @@ type IWorker interface {
 	Close()
 }
 
+// WorkerCfg is a config for Worker.
+type WorkerCfg struct {
+	Timeout time.Duration
+}
+
 // Worker is a struct for handling tasks.
 type Worker struct {
 	closed bool
@@ -25,7 +32,9 @@ type Worker struct {
 }
 
 // NewWorker is a factory method for creating of new workers.
-func NewWorker(pipeline chan<- IWorker, logger *zerolog.Logger) IWorker {
+func NewWorker(ctx context.Context,
+	cfg WorkerCfg, pipeline chan<- IWorker, logger *zerolog.Logger,
+) IWorker {
 	w := &Worker{ //nolint:exhaustivestruct
 		tasks:  make(chan ITask),
 		logger: logger,
@@ -53,8 +62,16 @@ func NewWorker(pipeline chan<- IWorker, logger *zerolog.Logger) IWorker {
 						}
 					}()
 
-					// @TODO: timeout
-					if tErr = task.Do(); tErr != nil {
+					tCtx := ctx
+
+					if cfg.Timeout > 0 {
+						var tCtxCancel context.CancelFunc
+						tCtx, tCtxCancel = context.WithTimeout(ctx, cfg.Timeout)
+
+						defer tCtxCancel()
+					}
+
+					if tErr = task.Do(tCtx); tErr != nil {
 						tErr = ErrWrapper{Msg: "task execution error", Err: tErr}
 					}
 

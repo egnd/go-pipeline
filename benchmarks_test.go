@@ -1,6 +1,7 @@
 package wpool_test
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -12,24 +13,28 @@ import (
 var logger = zerolog.Nop()
 
 func benchPool(cfg wpool.PoolCfg, b *testing.B) {
+	ctx := context.Background()
 	pool := wpool.NewPool(cfg, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
-		return wpool.NewWorker(pipeline, &logger)
+		return wpool.NewWorker(ctx, wpool.WorkerCfg{}, pipeline, &logger)
 	}, &logger)
+	defer pool.Close()
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		if err := pool.Add(&wpool.Task{Wg: &wg, Callback: func(task *wpool.Task) error {
-			time.Sleep(time.Millisecond)
-			return nil
+		if err := pool.Add(&wpool.Task{Wg: &wg, Callback: func(tCtx context.Context, task *wpool.Task) error {
+			select {
+			case <-time.After(time.Millisecond):
+				return nil
+			case <-tCtx.Done():
+				return &wpool.ErrTaskTimeout{task.GetName()}
+			}
 		}}); err != nil {
 			b.Error(err)
 			break
 		}
 		wg.Add(1)
 	}
-
 	wg.Wait()
-	pool.Close()
 }
 
 func Benchmark_Pool_W10_T100(b *testing.B) {
