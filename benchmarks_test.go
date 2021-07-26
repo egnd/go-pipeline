@@ -18,7 +18,7 @@ func benchPool(cfg wpool.PoolCfg, b *testing.B) {
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		if err := pool.Add(&wpool.Task{Wg: &wg, Callback: func() error {
+		if err := pool.Add(&wpool.Task{Wg: &wg, Callback: func(task *wpool.Task) error {
 			time.Sleep(time.Millisecond)
 			return nil
 		}}); err != nil {

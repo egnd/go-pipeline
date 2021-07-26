@@ -59,9 +59,12 @@ func Test_Pool(t *testing.T) {
 				wLog := logger.With().Uint("worker", num).Int("case", k).Logger()
 				return wpool.NewWorker(pipeline, &wLog)
 			}, &logger)
+
+			defer pool.Close()
+
 			go func(tCase testCase) {
 				for i := 0; i <= tCase.tasksCnt; i++ {
-					if err := pool.Add(&wpool.Task{Name: fmt.Sprint(i), Callback: func() error {
+					if err := pool.Add(&wpool.Task{Name: fmt.Sprint(i), Callback: func(task *wpool.Task) error {
 						if len(tCase.taskPanic) > 0 {
 							panic(tCase.taskPanic)
 						}
@@ -74,7 +77,6 @@ func Test_Pool(t *testing.T) {
 				}
 			}(test)
 			time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
-			pool.Close()
 		})
 	}
 }

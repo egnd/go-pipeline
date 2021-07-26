@@ -11,7 +11,7 @@ type ITask interface {
 // Task is a task struct.
 type Task struct {
 	Name     string
-	Callback func() error
+	Callback func(*Task) error
 	Wg       *sync.WaitGroup
 }
 
@@ -27,7 +27,7 @@ func (t *Task) Do() error {
 	}
 
 	if t.Callback != nil {
-		return t.Callback()
+		return t.Callback(t)
 	}
 
 	return nil
