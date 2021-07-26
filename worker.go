@@ -27,7 +27,6 @@ type Worker struct {
 	closed bool
 	mx     sync.Mutex
 	tasks  chan ITask
-	// @TODO: logger interface
 	logger *zerolog.Logger
 }
 

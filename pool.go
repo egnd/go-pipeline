@@ -26,8 +26,7 @@ type Pool struct {
 	pipeline chan IWorker
 	tasks    chan ITask
 	workers  []IWorker
-	// @TODO: logger interface
-	logger *zerolog.Logger
+	logger   *zerolog.Logger
 }
 
 // NewPool is a factory method for pool of workers.
