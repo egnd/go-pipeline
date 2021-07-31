@@ -44,6 +44,7 @@ func NewWorker(ctx context.Context, cfg WorkerCfg,
 	}
 
 	w.logger.Debug().Msg("spawned")
+
 	go w.run(ctx)
 
 	return w
