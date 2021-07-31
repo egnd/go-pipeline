@@ -52,7 +52,7 @@ ctx := context.Background()
 // create worker
 worker := wpool.NewWorker(ctx, wpool.WorkerCfg{
     TasksChanBuff: 10,
-	TaskTTL:       300 * time.Duration
+    TaskTTL:       300 * time.Duration
 }, &logger)
 defer worker.Close()
 
