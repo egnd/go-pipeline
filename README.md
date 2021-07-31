@@ -7,9 +7,7 @@ Golang package for making a pool of workers.
 [![Coverage](http://gocover.io/_badge/github.com/egnd/wpool)](http://gocover.io/github.com/egnd/wpool)
 [![Pipeline](https://github.com/egnd/wpool/actions/workflows/pipeline.yml/badge.svg)](https://github.com/egnd/wpool/actions?query=workflow%3APipeline)
 
-<!-- @TODO: add separate worker example -->
-<!-- @TODO: fix pool example -->
-### Example:
+### Pool example:
 ```golang
 logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 ctx := context.Background()
@@ -20,7 +18,10 @@ pool := wpool.NewPool(wpool.PoolCfg{
     TasksBufSize: 10,
 }, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
     wLog := logger.With().Uint("worker", num).Logger()
-    return wpool.NewWorker(ctx, wpool.WorkerCfg{}, pipeline, &wLog)
+    return wpool.NewWorker(ctx, wpool.WorkerCfg{
+        Pipeline: pipeline,
+        TaskTTL:  300 * time.Millisecond,
+    }, &wLog)
 }, &logger)
 defer pool.Close()
 
@@ -35,6 +36,37 @@ for i := 0; i < 20; i++ {
         },
     }); err != nil {
         logger.Error().Err(err).Msg("putting task to pool")
+        break
+    }
+    wg.Add(1)
+}
+// wait for tasks to be completed
+wg.Wait()
+```
+
+### Worker example:
+```golang
+logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+ctx := context.Background()
+
+// create worker
+worker := wpool.NewWorker(ctx, wpool.WorkerCfg{
+    TasksChanBuff: 10,
+	TaskTTL:       300 * time.Duration
+}, &logger)
+defer worker.Close()
+
+// put some tasks to worker
+var wg sync.WaitGroup
+for i := 0; i < 20; i++ {
+    if err := worker.Do(&wpool.Task{Wg: &wg, Name: fmt.Sprint(i),
+        Callback: func(tCtx context.Context, task *wpool.Task) error {
+            // do something here
+            logger.Info().Str("task", task.GetName()).Msg("do task")
+            return nil
+        },
+    }); err != nil {
+        logger.Error().Err(err).Msg("putting task to worker")
         break
     }
     wg.Add(1)
