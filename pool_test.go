@@ -27,7 +27,7 @@ func Test_Pool(t *testing.T) {
 		{
 			cfg:      wpool.PoolCfg{TasksBufSize: 4, WorkersCnt: 3},
 			tasksCnt: 10,
-			wCfg:     wpool.WorkerCfg{Timeout: time.Millisecond},
+			wCfg:     wpool.WorkerCfg{TaskTTL: time.Millisecond},
 		},
 		{
 			cfg:      wpool.PoolCfg{WorkersCnt: 1},
@@ -61,7 +61,8 @@ func Test_Pool(t *testing.T) {
 		t.Run(fmt.Sprint(k), func(tt *testing.T) {
 			pool := wpool.NewPool(test.cfg, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
 				wLog := logger.With().Uint("worker", num).Int("case", k).Logger()
-				return wpool.NewWorker(ctx, test.wCfg, pipeline, &wLog)
+				test.wCfg.Pipeline = pipeline
+				return wpool.NewWorker(ctx, test.wCfg, &wLog)
 			}, &logger)
 
 			defer pool.Close()

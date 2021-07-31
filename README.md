@@ -7,6 +7,8 @@ Golang package for making a pool of workers.
 [![Coverage](http://gocover.io/_badge/github.com/egnd/wpool)](http://gocover.io/github.com/egnd/wpool)
 [![Pipeline](https://github.com/egnd/wpool/actions/workflows/pipeline.yml/badge.svg)](https://github.com/egnd/wpool/actions?query=workflow%3APipeline)
 
+<!-- @TODO: add separate worker example -->
+<!-- @TODO: fix pool example -->
 ### Example:
 ```golang
 logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
