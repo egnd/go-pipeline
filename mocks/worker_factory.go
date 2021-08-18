@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	wpool "github.com/egnd/wpool"
+	wpool "github.com/egnd/go-wpool"
 	mock "github.com/stretchr/testify/mock"
 )
 

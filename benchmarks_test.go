@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/egnd/wpool"
+	"github.com/egnd/go-wpool"
 	"github.com/rs/zerolog"
 )
 

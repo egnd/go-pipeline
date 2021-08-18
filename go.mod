@@ -1,4 +1,4 @@
-module github.com/egnd/wpool
+module github.com/egnd/go-wpool
 
 go 1.16
 

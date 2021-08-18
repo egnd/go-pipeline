@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/egnd/wpool"
+	"github.com/egnd/go-wpool"
 	"github.com/stretchr/testify/assert"
 )
 

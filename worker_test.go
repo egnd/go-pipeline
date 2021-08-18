@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/egnd/wpool"
-	"github.com/egnd/wpool/mocks"
+	"github.com/egnd/go-wpool"
+	"github.com/egnd/go-wpool/mocks"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
