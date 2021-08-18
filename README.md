@@ -1,4 +1,4 @@
-# wpool
+# go-wpool
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/egnd/go-wpool.svg)](https://pkg.go.dev/github.com/egnd/go-wpool)
 [![Go Report Card](https://goreportcard.com/badge/github.com/egnd/go-wpool)](https://goreportcard.com/report/github.com/egnd/go-wpool)
