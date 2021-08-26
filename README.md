@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/egnd/go-wpool.svg)](https://pkg.go.dev/github.com/egnd/go-wpool)
 [![Go Report Card](https://goreportcard.com/badge/github.com/egnd/go-wpool)](https://goreportcard.com/report/github.com/egnd/go-wpool)
-[![Coverage](http://gocover.io/_badge/github.com/egnd/go-wpool)](http://gocover.io/github.com/egnd/go-wpool)
+[![Coverage](https://gocover.io/_badge/github.com/egnd/go-wpool)](https://gocover.io/github.com/egnd/go-wpool)
 [![Pipeline](https://github.com/egnd/go-wpool/actions/workflows/pipeline.yml/badge.svg)](https://github.com/egnd/go-wpool/actions?query=workflow%3APipeline)
 
 Golang package for making a pool of workers.
