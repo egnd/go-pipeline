@@ -37,11 +37,11 @@ mocks: ## Generate mocks
 
 tests: ## Run unit tests
 	@rm -rf coverage && mkdir -p coverage
-	CGO_ENABLED=1 go test -mod=readonly -race -cover -covermode=atomic -coverprofile=coverage/profile.out .
+	CGO_ENABLED=1 go test -mod=vendor -race -cover -covermode=atomic -coverprofile=coverage/profile.out .
 
 benchmarks: ## Run benchmarks
 	@clear
-	go test -mod=readonly -benchmem -bench . benchmarks_test.go
+	go test -mod=vendor -benchmem -bench . benchmarks_test.go
 
 coverage: tests ## Check code coveragem
 	go tool cover -func=coverage/profile.out
@@ -49,7 +49,7 @@ coverage: tests ## Check code coveragem
 
 profiling: ## Run unit tests
 	@clear && rm -rf coverage && mkdir -p coverage
-	go test -mod=readonly -cpuprofile=coverage/cpu.prof -memprofile=coverage/mem.prof .
+	go test -mod=vendor -cpuprofile=coverage/cpu.prof -memprofile=coverage/mem.prof .
 	go tool pprof -svg coverage/cpu.prof > coverage/cpu.svg
 	go tool pprof -svg coverage/mem.prof > coverage/mem.svg
 
@@ -60,25 +60,25 @@ lint: ## Lint source code
 ########################################################################################################################
 
 docker-lint:
-	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint make golangci/golangci-lint:v1.41 lint
+	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint make golangci/golangci-lint:v1.45 lint
 
 docker-mocks:
 	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint sh vektra/mockery:v2 -c "apk add -q make && make mocks"
 
 docker-tests:
-	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint make golang:1.16 tests
+	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint make golang:1.18 tests
 
 docker-coverage:
-	docker run --rm -it -v $$(pwd):/src -w /src --env-file=.env --entrypoint make golang:1.16 coverage
+	docker run --rm -it -v $$(pwd):/src -w /src --env-file=.env --entrypoint make golang:1.18 coverage
 	@echo "Read report at file://$$(pwd)/coverage/report.html"
 
 docker-benchmarks:
-	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint make golang:1.16 benchmarks
+	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint make golang:1.18 benchmarks
 
 docker-profiling:
-	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint sh golang:1.16 -c "apt-get update && apt-get install -y graphviz && make profiling"
+	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint sh golang:1.18 -c "apt-get update && apt-get install -y graphviz && make profiling"
 	@echo "Look at file://$$(pwd)/coverage/cpu.svg"
 	@echo "Look at file://$$(pwd)/coverage/mem.svg"
 
 docker-vendor:
-	docker run --rm -it -v $$(pwd):/src -w /src --env-file=.env --entrypoint go golang:1.16 mod vendor
+	docker run --rm -it -v $$(pwd):/src -w /src --env-file=.env --entrypoint go golang:1.18 mod vendor

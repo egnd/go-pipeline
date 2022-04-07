@@ -9,7 +9,6 @@ Golang package for making a pool of workers.
 
 ### Pool example:
 ```golang
-logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 ctx := context.Background()
 
 // create pool and define worker's factory
@@ -17,28 +16,23 @@ pool := wpool.NewPool(wpool.PoolCfg{
     WorkersCnt:   3,
     TasksBufSize: 10,
 }, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
-    wLog := logger.With().Uint("worker", num).Logger()
     return wpool.NewWorker(ctx, wpool.WorkerCfg{
         Pipeline: pipeline,
         TaskTTL:  300 * time.Millisecond,
-    }, &wLog)
-}, &logger)
+    })
+})
 defer pool.Close()
 
 // put some tasks to pool
 var wg sync.WaitGroup
 for i := 0; i < 20; i++ {
-    if err := pool.Add(&wpool.Task{Wg: &wg, Name: fmt.Sprint(i),
-        Callback: func(tCtx context.Context, task *wpool.Task) error {
-            // do something here
-            logger.Info().Str("task", task.GetName()).Msg("do task")
-            return nil
-        },
-    }); err != nil {
-        logger.Error().Err(err).Msg("putting task to pool")
-        break
-    }
     wg.Add(1)
+    if err := pool.Add(&wpool.Task{Callback: func(tCtx context.Context, task *wpool.Task) {
+        // @TODO: do something here
+        return
+    }}); err != nil {
+        panic(err)
+    }
 }
 // wait for tasks to be completed
 wg.Wait()
@@ -46,30 +40,25 @@ wg.Wait()
 
 ### Worker example:
 ```golang
-logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 ctx := context.Background()
 
 // create worker
 worker := wpool.NewWorker(ctx, wpool.WorkerCfg{
     TasksChanBuff: 10,
-    TaskTTL:       300 * time.Duration
-}, &logger)
+    TaskTTL:       300 * time.Duration,
+})
 defer worker.Close()
 
 // put some tasks to worker
 var wg sync.WaitGroup
 for i := 0; i < 20; i++ {
-    if err := worker.Do(&wpool.Task{Wg: &wg, Name: fmt.Sprint(i),
-        Callback: func(tCtx context.Context, task *wpool.Task) error {
-            // do something here
-            logger.Info().Str("task", task.GetName()).Msg("do task")
-            return nil
-        },
-    }); err != nil {
-        logger.Error().Err(err).Msg("putting task to worker")
-        break
-    }
     wg.Add(1)
+    if err := worker.Do(&wpool.Task{Callback: func(tCtx context.Context, task *wpool.Task) error {
+        // @TODO: do something here
+        return
+    }}); err != nil {
+        panic(err)
+    }
 }
 // wait for tasks to be completed
 wg.Wait()

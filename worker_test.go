@@ -2,17 +2,17 @@ package wpool_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
-	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/egnd/go-wpool"
 	"github.com/egnd/go-wpool/mocks"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func Test_Worker(t *testing.T) {
@@ -24,37 +24,48 @@ func Test_Worker(t *testing.T) {
 		{
 			cfg: wpool.WorkerCfg{
 				TasksChanBuff: 10,
-				TaskTTL:       15 * time.Millisecond,
+				TaskTTL:       time.Minute,
+				Pipeline:      make(chan<- wpool.IWorker, 100),
 			},
 			tasksCnt: 21,
 		},
+		{
+			cfg:      wpool.WorkerCfg{TasksChanBuff: 20},
+			tasksCnt: 10,
+			err:      errors.New("error"),
+		},
 	}
-	logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	ctx := context.Background()
 	for k, test := range cases {
 		t.Run(fmt.Sprint(k), func(tt *testing.T) {
-			wLog := logger.With().Int("worker", k).Logger()
-			worker := wpool.NewWorker(ctx, test.cfg, &wLog)
-			defer worker.Close()
-
+			worker := wpool.NewWorker(ctx, test.cfg)
+			var wg sync.WaitGroup
 			for i := 0; i <= test.tasksCnt; i++ {
-				if err := worker.Do(&wpool.Task{Name: fmt.Sprint(i), Callback: func(tCtx context.Context, task *wpool.Task) error {
+				wg.Add(1)
+				assert.NoError(tt, worker.Do(&wpool.Task{Callback: func(tCtx context.Context) {
+					defer wg.Done()
 					time.Sleep(time.Duration(rand.Intn(10)) * time.Millisecond)
-					return test.err
-				}}); err != nil {
-					break
-				}
+					return
+				}}))
 			}
-			time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+			wg.Wait()
+			assert.NoError(tt, worker.Close())
 		})
 	}
 }
 
 func Test_Worker_DoAfterClose(t *testing.T) {
-	logger := zerolog.Nop()
-	worker := wpool.NewWorker(context.Background(), wpool.WorkerCfg{
-		Pipeline: make(chan wpool.IWorker),
-	}, &logger)
+	worker := wpool.NewWorker(context.Background(), wpool.WorkerCfg{})
 	worker.Close()
-	assert.EqualValues(t, wpool.ErrIsClosed(wpool.ErrIsClosed{EntityName: "worker"}), worker.Do(&mocks.ITask{}))
+	assert.EqualError(t, worker.Do(&mocks.ITask{}), "add task to worker error: worker is closed")
+}
+
+func Test_Worker_ClosePipeline(t *testing.T) {
+	pipeline := make(chan wpool.IWorker)
+	wpool.NewWorker(context.Background(), wpool.WorkerCfg{Pipeline: pipeline, TasksChanBuff: 1})
+	worker := <-pipeline
+	close(pipeline)
+	task := &mocks.ITask{}
+	task.On("Do", mock.Anything).Once()
+	worker.Do(task)
 }

@@ -5,83 +5,77 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/egnd/go-wpool"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"github.com/egnd/go-wpool/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
-type testCase struct {
-	cfg       wpool.PoolCfg
-	wCfg      wpool.WorkerCfg
-	tasksCnt  int
-	taskErr   error
-	taskPanic string
-}
-
 func Test_Pool(t *testing.T) {
-	cases := []testCase{
+	cases := []struct {
+		pCfg     wpool.PoolCfg
+		wCfg     wpool.WorkerCfg
+		tasksCnt int
+		taskErr  error
+	}{
 		{
-			cfg:      wpool.PoolCfg{TasksBufSize: 4, WorkersCnt: 3},
+			pCfg:     wpool.PoolCfg{TasksBufSize: 4, WorkersCnt: 3},
 			tasksCnt: 10,
 			wCfg:     wpool.WorkerCfg{TaskTTL: time.Millisecond},
 		},
 		{
-			cfg:      wpool.PoolCfg{WorkersCnt: 1},
-			tasksCnt: 3000,
+			pCfg:     wpool.PoolCfg{WorkersCnt: 1},
+			tasksCnt: 500,
 		},
 		{
-			cfg: wpool.PoolCfg{TasksBufSize: 20, WorkersCnt: 5},
+			pCfg: wpool.PoolCfg{TasksBufSize: 20, WorkersCnt: 5},
 		},
 		{
-			cfg:      wpool.PoolCfg{WorkersCnt: 2},
+			pCfg:     wpool.PoolCfg{WorkersCnt: 2},
 			tasksCnt: 14,
 		},
 		{
-			cfg:      wpool.PoolCfg{TasksBufSize: 25, WorkersCnt: 1},
+			pCfg:     wpool.PoolCfg{TasksBufSize: 25, WorkersCnt: 1},
 			tasksCnt: 13,
 		},
-		{
-			cfg:      wpool.PoolCfg{WorkersCnt: 3},
-			tasksCnt: 1,
-			taskErr:  errors.New("error"),
-		},
-		{
-			cfg:       wpool.PoolCfg{WorkersCnt: 3},
-			tasksCnt:  1,
-			taskPanic: "panic msg",
-		},
 	}
-	logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	ctx := context.Background()
 	for k, test := range cases {
 		t.Run(fmt.Sprint(k), func(tt *testing.T) {
-			pool := wpool.NewPool(test.cfg, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
-				wLog := logger.With().Uint("worker", num).Int("case", k).Logger()
+			pool := wpool.NewPool(test.pCfg, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
 				test.wCfg.Pipeline = pipeline
-				return wpool.NewWorker(ctx, test.wCfg, &wLog)
-			}, &logger)
+				return wpool.NewWorker(ctx, test.wCfg)
+			})
 
-			defer pool.Close()
-
-			go func(tCase testCase) {
-				for i := 0; i <= tCase.tasksCnt; i++ {
-					if err := pool.Add(&wpool.Task{Name: fmt.Sprint(i), Callback: func(tCtx context.Context, task *wpool.Task) error {
-						if len(tCase.taskPanic) > 0 {
-							panic(tCase.taskPanic)
-						}
+			var wg sync.WaitGroup
+			for i := 0; i <= test.tasksCnt; i++ {
+				wg.Add(1)
+				go func() {
+					assert.NoError(tt, pool.Add(&wpool.Task{Callback: func(tCtx context.Context) {
+						defer wg.Done()
 						time.Sleep(time.Duration(rand.Intn(10)) * time.Millisecond)
-						return tCase.taskErr
-					}}); err != nil {
-						break
-					}
-					time.Sleep(time.Duration(rand.Intn(2)) * time.Millisecond)
-				}
-			}(test)
-			time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
+						return
+					}}))
+				}()
+			}
+
+			wg.Wait()
+
+			assert.NoError(tt, pool.Close())
 		})
 	}
+}
+
+func Test_Pool_CloseError(t *testing.T) {
+	pool := wpool.NewPool(wpool.PoolCfg{WorkersCnt: 10}, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
+		w := &mocks.IWorker{}
+		w.On("Close").Return(errors.New("error"))
+		return w
+	})
+
+	assert.Error(t, pool.Close())
+	assert.Error(t, pool.Add(&mocks.ITask{}))
 }

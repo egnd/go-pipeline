@@ -2,20 +2,9 @@ package wpool
 
 import (
 	"context"
-	"sync"
+	"errors"
 	"time"
-
-	"github.com/rs/zerolog"
 )
-
-// WorkerFactory is a factory method to pass into pool of workers.
-type WorkerFactory func(uint, chan IWorker) IWorker
-
-// IWorker is a worker interface.
-type IWorker interface {
-	Do(ITask) error
-	Close()
-}
 
 // WorkerCfg is a config for Worker.
 type WorkerCfg struct {
@@ -26,92 +15,86 @@ type WorkerCfg struct {
 
 // Worker is a struct for handling tasks.
 type Worker struct {
-	closed bool
-	cfg    WorkerCfg
-	mx     sync.Mutex
-	tasks  chan ITask
-	logger *zerolog.Logger
+	cfg        WorkerCfg
+	tasks      chan ITask
+	stopNotify chan struct{}
 }
 
 // NewWorker is a factory method for creating of new workers.
-func NewWorker(ctx context.Context, cfg WorkerCfg,
-	logger *zerolog.Logger,
-) IWorker {
-	w := &Worker{ //nolint:exhaustivestruct
-		tasks:  make(chan ITask, cfg.TasksChanBuff),
-		logger: logger,
-		cfg:    cfg,
+func NewWorker(ctx context.Context, cfg WorkerCfg) *Worker {
+	tasksBuf := cfg.TasksChanBuff
+
+	if cfg.Pipeline != nil {
+		tasksBuf = 1
 	}
 
-	w.logger.Debug().Msg("spawned")
+	worker := &Worker{
+		cfg:        cfg,
+		tasks:      make(chan ITask, tasksBuf),
+		stopNotify: make(chan struct{}),
+	}
 
-	go w.run(ctx)
+	go worker.run(ctx)
 
-	return w
+	return worker
 }
 
 func (w *Worker) run(ctx context.Context) {
-	for {
-		w.notifyPipeline()
-
-		for task := range w.tasks {
-			w.logger.Debug().Str("task", task.GetName()).Msg("new task")
-
-			if err := w.exec(ctx, task); err != nil {
-				w.logger.Error().Str("task", task.GetName()).Err(err).Msg("do")
-			}
-
-			if w.cfg.Pipeline != nil {
-				break
-			}
-		}
-	}
-}
-
-func (w *Worker) notifyPipeline() {
 	if w.cfg.Pipeline == nil {
+		for task := range w.tasks {
+			w.exec(ctx, task)
+		}
+
 		return
 	}
 
-	w.mx.Lock()
-	defer w.mx.Unlock()
+	for {
+		if err := w.notifyPipeline(); err != nil {
+			return
+		}
 
-	if !w.closed {
-		w.cfg.Pipeline <- w
+		for task := range w.tasks {
+			w.exec(ctx, task)
+
+			break
+		}
 	}
 }
 
-func (w *Worker) exec(ctx context.Context, task ITask) (tErr error) {
+func (w *Worker) notifyPipeline() (err error) {
 	defer func() {
-		if panicMsg := recover(); panicMsg != nil {
-			tErr = ErrPanic{panicMsg}
+		if r := recover(); r != nil {
+			err = errors.New("move worker to pipeline error: pipeline is closed")
 		}
 	}()
 
-	tCtx := ctx
-
-	if w.cfg.TaskTTL > 0 {
-		var tCtxCancel context.CancelFunc
-		tCtx, tCtxCancel = context.WithTimeout(ctx, w.cfg.TaskTTL)
-
-		defer tCtxCancel()
-	}
-
-	if tErr = task.Do(tCtx); tErr != nil {
-		tErr = ErrWrapper{Msg: "task execution error", Err: tErr}
+	select {
+	case w.cfg.Pipeline <- w:
+	case <-w.stopNotify:
+		err = errors.New("worker is stopped")
 	}
 
 	return
 }
 
-// Do is method for putting task to worker.
-func (w *Worker) Do(task ITask) error {
-	w.mx.Lock()
-	defer w.mx.Unlock()
+func (w *Worker) exec(ctx context.Context, task ITask) {
+	if w.cfg.TaskTTL > 0 {
+		var ctxCancel context.CancelFunc
+		ctx, ctxCancel = context.WithTimeout(ctx, w.cfg.TaskTTL)
 
-	if w.closed {
-		return ErrIsClosed{"worker"}
+		defer ctxCancel()
 	}
+
+	task.Do(ctx)
+}
+
+// Do is method for putting task to worker.
+func (w *Worker) Do(task ITask) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("add task to worker error: worker is closed")
+		}
+	}()
 
 	w.tasks <- task
 
@@ -119,13 +102,14 @@ func (w *Worker) Do(task ITask) error {
 }
 
 // Close is a method for worker stopping.
-func (w *Worker) Close() {
-	w.logger.Debug().Msg("close")
-
-	w.mx.Lock()
-	defer w.mx.Unlock()
-
-	w.closed = true
-
+func (w *Worker) Close() (err error) {
 	close(w.tasks)
+
+	if w.cfg.Pipeline != nil {
+		w.stopNotify <- struct{}{}
+	}
+
+	close(w.stopNotify)
+
+	return
 }
