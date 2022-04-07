@@ -1,17 +1,7 @@
 // Package wpool contains structs and functions for making a pool of workers.
 package wpool
 
-import (
-	"sync"
-
-	"github.com/rs/zerolog"
-)
-
-// IPool is pool of workers interface.
-type IPool interface {
-	Add(ITask) error
-	Close()
-}
+import "errors"
 
 // PoolCfg is pool config.
 type PoolCfg struct {
@@ -21,32 +11,28 @@ type PoolCfg struct {
 
 // Pool is struct for handlindg tasks with workers.
 type Pool struct {
-	closed   bool
-	mx       sync.Mutex
 	pipeline chan IWorker
 	tasks    chan ITask
 	workers  []IWorker
-	logger   *zerolog.Logger
 }
 
 // NewPool is a factory method for pool of workers.
-func NewPool(cfg PoolCfg, worker WorkerFactory, logger *zerolog.Logger) IPool {
-	p := &Pool{ //nolint:exhaustivestruct
+func NewPool(cfg PoolCfg, newWorker IWorkerFactory) *Pool {
+	pool := &Pool{
 		tasks:    make(chan ITask, cfg.TasksBufSize),
 		pipeline: make(chan IWorker),
 		workers:  make([]IWorker, 0, cfg.WorkersCnt),
-		logger:   logger,
 	}
 
 	for i := uint(0); i < cfg.WorkersCnt; i++ {
-		p.workers = append(p.workers, worker(i, p.pipeline))
+		pool.workers = append(pool.workers, newWorker(i, pool.pipeline))
 	}
 
 	go func() {
-		for worker := range p.pipeline {
-			for task := range p.tasks {
+		for worker := range pool.pipeline {
+			for task := range pool.tasks {
 				if err := worker.Do(task); err != nil {
-					p.logger.Error().Err(err).Msg("worker exec")
+					panic(err)
 				}
 
 				break //nolint:staticcheck
@@ -54,38 +40,32 @@ func NewPool(cfg PoolCfg, worker WorkerFactory, logger *zerolog.Logger) IPool {
 		}
 	}()
 
-	return p
+	return pool
 }
 
 // Add is method for putting task into pool of workers.
-func (p *Pool) Add(task ITask) error {
-	p.mx.Lock()
-
-	if p.closed {
-		defer p.mx.Unlock()
-
-		return ErrIsClosed{"pool"}
-	}
+func (p *Pool) Add(task ITask) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("add task to pool error: pool is closed")
+		}
+	}()
 
 	p.tasks <- task
-	p.mx.Unlock()
 
-	return nil
+	return
 }
 
 // Close is method for stopping for pool of workers.
-func (p *Pool) Close() {
-	p.mx.Lock()
-
-	defer p.mx.Unlock()
-
-	p.closed = true
-
+func (p *Pool) Close() (err error) {
 	close(p.tasks)
+	defer close(p.pipeline)
 
 	for _, worker := range p.workers {
-		worker.Close()
+		if err = worker.Close(); err != nil {
+			return
+		}
 	}
 
-	close(p.pipeline)
+	return
 }

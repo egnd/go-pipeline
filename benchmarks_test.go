@@ -7,10 +7,7 @@ import (
 	"time"
 
 	"github.com/egnd/go-wpool"
-	"github.com/rs/zerolog"
 )
-
-var logger = zerolog.Nop()
 
 func benchPool(cfg wpool.PoolCfg, b *testing.B) {
 	ctx := context.Background()
@@ -18,47 +15,51 @@ func benchPool(cfg wpool.PoolCfg, b *testing.B) {
 		return wpool.NewWorker(ctx, wpool.WorkerCfg{
 			Pipeline: pipeline,
 			TaskTTL:  5 * time.Millisecond,
-		}, &logger)
-	}, &logger)
+		})
+	})
 	defer pool.Close()
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		if err := pool.Add(&wpool.Task{Wg: &wg, Callback: func(tCtx context.Context, task *wpool.Task) error {
+		wg.Add(1)
+		if err := pool.Add(&wpool.Task{Callback: func(ctx context.Context) {
+			defer wg.Done()
+
 			select {
 			case <-time.After(time.Millisecond):
-				return nil
-			case <-tCtx.Done():
-				return &wpool.ErrTaskTimeout{task.GetName()}
+				return
+			case <-ctx.Done():
+				return
 			}
 		}}); err != nil {
 			b.Error(err)
 			break
 		}
-		wg.Add(1)
 	}
 	wg.Wait()
 }
 
 func benchWorker(cfg wpool.WorkerCfg, b *testing.B) {
 	ctx := context.Background()
-	worker := wpool.NewWorker(ctx, cfg, &logger)
+	worker := wpool.NewWorker(ctx, cfg)
 	defer worker.Close()
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
-		if err := worker.Do(&wpool.Task{Wg: &wg, Callback: func(tCtx context.Context, task *wpool.Task) error {
+		wg.Add(1)
+		if err := worker.Do(&wpool.Task{Callback: func(ctx context.Context) {
+			defer wg.Done()
+
 			select {
 			case <-time.After(time.Millisecond):
-				return nil
-			case <-tCtx.Done():
-				return &wpool.ErrTaskTimeout{task.GetName()}
+				return
+			case <-ctx.Done():
+				return
 			}
 		}}); err != nil {
 			b.Error(err)
 			break
 		}
-		wg.Add(1)
 	}
 	wg.Wait()
 }

@@ -1,6 +1,7 @@
 ---
 # https://github.com/golangci/golangci-lint#configuration
 run:
+  go: 1.17
   deadline: 5m
   concurency: 4
   timeout: 1m
@@ -14,6 +15,12 @@ output:
   print-linter-name: true
 linters:
   enable-all: true
+  disable:
+   - goerr113
+   - golint
+   - interfacer
+   - maligned
+   - scopelint
   fast: false
 issues:
   exclude-use-default: false
