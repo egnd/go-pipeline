@@ -9,57 +9,78 @@ Golang package for making a pool of workers.
 
 ### Pool example:
 ```golang
-ctx := context.Background()
+package main
 
-// create pool and define worker's factory
-pool := wpool.NewPool(wpool.PoolCfg{
-    WorkersCnt:   3,
-    TasksBufSize: 10,
-}, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
-    return wpool.NewWorker(ctx, wpool.WorkerCfg{
-        Pipeline: pipeline,
-        TaskTTL:  300 * time.Millisecond,
-    })
-})
-defer pool.Close()
+import (
+	"fmt"
+	"sync"
 
-// put some tasks to pool
-var wg sync.WaitGroup
-for i := 0; i < 20; i++ {
-    wg.Add(1)
-    if err := pool.Add(&wpool.Task{Callback: func(tCtx context.Context, task *wpool.Task) {
-        // @TODO: do something here
-        return
-    }}); err != nil {
-        panic(err)
-    }
+	"github.com/egnd/go-wpool/v2"
+	"github.com/egnd/go-wpool/v2/interfaces"
+	"github.com/rs/zerolog"
+)
+
+func main() {
+    // create pipeline and pool
+    pipeline := make(chan interfaces.Worker)
+	pool := wpool.NewPipelinePool(pipeline, 
+        wpool.NewZerologAdapter(zerolog.New()),
+    )
+	defer pool.Close()
+
+    // add few workers
+	pool.AddWorker(wpool.NewPipelineWorker(pipeline))
+    pool.AddWorker(wpool.NewPipelineWorker(pipeline))
+
+    // put some tasks to pool
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		if err := pool.AddTask(&SomeTask{&wg, "task"+fmt.Sprint(i)}); err != nil {
+			panic(err)
+		}
+	}
+
+    // wait for tasks to be completed
+	wg.Wait()
 }
-// wait for tasks to be completed
-wg.Wait()
 ```
 
-### Worker example:
+### Sticky pool example (tasks with the same ID will be processed by the same worker):
 ```golang
-ctx := context.Background()
+package main
 
-// create worker
-worker := wpool.NewWorker(ctx, wpool.WorkerCfg{
-    TasksChanBuff: 10,
-    TaskTTL:       300 * time.Duration,
-})
-defer worker.Close()
+import (
+	"fmt"
+	"sync"
 
-// put some tasks to worker
-var wg sync.WaitGroup
-for i := 0; i < 20; i++ {
-    wg.Add(1)
-    if err := worker.Do(&wpool.Task{Callback: func(tCtx context.Context, task *wpool.Task) error {
-        // @TODO: do something here
-        return
-    }}); err != nil {
-        panic(err)
-    }
+	"github.com/egnd/go-wpool/v2"
+	"github.com/egnd/go-wpool/v2/interfaces"
+	"github.com/rs/zerolog"
+)
+
+func main() {
+    // create pool
+    pool := wpool.NewStickyPool(
+        wpool.NewZerologAdapter(zerolog.Nop())
+    )
+	defer pool.Close()
+
+    // add few workers
+    buffSize := 100
+	pool.AddWorker(wpool.NewWorker(buffSize))
+    pool.AddWorker(wpool.NewWorker(buffSize))
+
+	// put some tasks to pool
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		if err := pool.AddTask(&SomeTask{&wg, "task"+fmt.Sprint(i)}); err != nil {
+			panic(err)
+		}
+	}
+
+    // wait for tasks to be completed
+	wg.Wait()
 }
-// wait for tasks to be completed
-wg.Wait()
 ```
