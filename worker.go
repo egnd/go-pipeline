@@ -1,98 +1,38 @@
 package wpool
 
 import (
-	"context"
 	"errors"
-	"time"
+
+	"github.com/egnd/go-wpool/v2/interfaces"
 )
 
-// WorkerCfg is a config for Worker.
-type WorkerCfg struct {
-	TasksChanBuff uint
-	TaskTTL       time.Duration
-	Pipeline      chan<- IWorker
-}
-
-// Worker is a struct for handling tasks.
+// Worker struct for handling tasks.
 type Worker struct {
-	cfg        WorkerCfg
-	tasks      chan ITask
-	stopNotify chan struct{}
+	tasks chan interfaces.Task
 }
 
-// NewWorker is a factory method for creating of new workers.
-func NewWorker(ctx context.Context, cfg WorkerCfg) *Worker {
-	tasksBuf := cfg.TasksChanBuff
-
-	if cfg.Pipeline != nil {
-		tasksBuf = 1
-	}
-
+// NewWorker creates workers with tasks queue.
+func NewWorker(buffSize int) *Worker {
 	worker := &Worker{
-		cfg:        cfg,
-		tasks:      make(chan ITask, tasksBuf),
-		stopNotify: make(chan struct{}),
+		tasks: make(chan interfaces.Task, buffSize),
 	}
 
-	go worker.run(ctx)
+	go worker.run()
 
 	return worker
 }
 
-func (w *Worker) run(ctx context.Context) {
-	if w.cfg.Pipeline == nil {
-		for task := range w.tasks {
-			w.exec(ctx, task)
-		}
-
-		return
-	}
-
-	for {
-		if err := w.notifyPipeline(); err != nil {
-			return
-		}
-
-		for task := range w.tasks {
-			w.exec(ctx, task)
-
-			break
-		}
+func (w *Worker) run() {
+	for task := range w.tasks {
+		task.Do()
 	}
 }
 
-func (w *Worker) notifyPipeline() (err error) {
+// Do is putting task to worker queue.
+func (w *Worker) Do(task interfaces.Task) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New("move worker to pipeline error: pipeline is closed")
-		}
-	}()
-
-	select {
-	case w.cfg.Pipeline <- w:
-	case <-w.stopNotify:
-		err = errors.New("worker is stopped")
-	}
-
-	return
-}
-
-func (w *Worker) exec(ctx context.Context, task ITask) {
-	if w.cfg.TaskTTL > 0 {
-		var ctxCancel context.CancelFunc
-		ctx, ctxCancel = context.WithTimeout(ctx, w.cfg.TaskTTL)
-
-		defer ctxCancel()
-	}
-
-	task.Do(ctx)
-}
-
-// Do is method for putting task to worker.
-func (w *Worker) Do(task ITask) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = errors.New("add task to worker error: worker is closed")
+			err = errors.New("worker is closed")
 		}
 	}()
 
@@ -101,15 +41,9 @@ func (w *Worker) Do(task ITask) (err error) {
 	return nil
 }
 
-// Close is a method for worker stopping.
-func (w *Worker) Close() (err error) {
+// Close is stopping worker.
+func (w *Worker) Close() error {
 	close(w.tasks)
 
-	if w.cfg.Pipeline != nil {
-		w.stopNotify <- struct{}{}
-	}
-
-	close(w.stopNotify)
-
-	return
+	return nil
 }

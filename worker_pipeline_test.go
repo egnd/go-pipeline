@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func Test_Worker_Do(t *testing.T) {
+func Test_WorkerPipeline_Do(t *testing.T) {
 	cases := []struct {
 		buffSize int
 		tasksCnt int
@@ -29,7 +29,8 @@ func Test_Worker_Do(t *testing.T) {
 	}
 	for k, test := range cases {
 		t.Run(fmt.Sprint(k), func(tt *testing.T) {
-			worker := wpool.NewWorker(test.buffSize)
+			pipeline := make(chan interfaces.Worker)
+			wpool.NewPipelineWorker(pipeline)
 
 			var wg sync.WaitGroup
 			for i := 0; i <= test.tasksCnt; i++ {
@@ -39,17 +40,27 @@ func Test_Worker_Do(t *testing.T) {
 				defer task.AssertExpectations(tt)
 				task.On("Do").Once().After(time.Duration(rand.Intn(10)) * time.Millisecond).Run(func(_ mock.Arguments) { wg.Done() })
 
-				assert.NoError(tt, worker.Do(task))
+				assert.NoError(tt, (<-pipeline).Do(task))
 			}
 
 			wg.Wait()
-			assert.NoError(tt, worker.Close())
+			assert.NoError(tt, (<-pipeline).Close())
 		})
 	}
 }
 
-func Test_Worker_Close(t *testing.T) {
-	worker := wpool.NewWorker(0)
+func Test_WorkerPipeline_Close_Error(t *testing.T) {
+	pipeline := make(chan interfaces.Worker)
+	wpool.NewPipelineWorker(pipeline)
+	worker := <-pipeline
 	worker.Close()
 	assert.EqualError(t, worker.Do(nil), "worker is closed")
+}
+
+func Test_WorkerPipeline_Pipeline_Close_Error(t *testing.T) {
+	pipeline := make(chan interfaces.Worker)
+	close(pipeline)
+	w := wpool.NewPipelineWorker(pipeline)
+	time.Sleep(50 * time.Millisecond)
+	assert.EqualError(t, w.Close(), "worker already closed")
 }

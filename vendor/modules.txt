@@ -1,9 +1,17 @@
+# github.com/cespare/xxhash v1.1.0
+## explicit
+github.com/cespare/xxhash
 # github.com/davecgh/go-spew v1.1.0
 ## explicit
 github.com/davecgh/go-spew/spew
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
+# github.com/rs/zerolog v1.26.1
+## explicit; go 1.15
+github.com/rs/zerolog
+github.com/rs/zerolog/internal/cbor
+github.com/rs/zerolog/internal/json
 # github.com/stretchr/objx v0.1.0
 ## explicit
 github.com/stretchr/objx

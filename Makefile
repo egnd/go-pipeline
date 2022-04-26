@@ -32,30 +32,25 @@ check-master: ## Check for latest master in current branch
 	@echo "All is OK"
 
 mocks: ## Generate mocks
-	@clear && rm -rf mocks
+	@clear && rm -f interfaces/mock_*.go
 	mockery
 
 tests: ## Run unit tests
 	@rm -rf coverage && mkdir -p coverage
-	CGO_ENABLED=1 go test -mod=vendor -race -cover -covermode=atomic -coverprofile=coverage/profile.out .
+	CGO_ENABLED=1 go test -mod=vendor -race -cover -covermode=atomic -coverprofile=coverage/profile.out ./...
 
 benchmarks: ## Run benchmarks
 	@clear
 	go test -mod=vendor -benchmem -bench . benchmarks_test.go
 
 coverage: tests ## Check code coveragem
-	go tool cover -func=coverage/profile.out
-	go tool cover -html=coverage/profile.out -o coverage/report.html
-
-profiling: ## Run unit tests
-	@clear && rm -rf coverage && mkdir -p coverage
-	go test -mod=vendor -cpuprofile=coverage/cpu.prof -memprofile=coverage/mem.prof .
-	go tool pprof -svg coverage/cpu.prof > coverage/cpu.svg
-	go tool pprof -svg coverage/mem.prof > coverage/mem.svg
+	cat coverage/profile.out | grep -v "mock_" > coverage/profile.cov
+	go tool cover -func=coverage/profile.cov
+	go tool cover -html=coverage/profile.cov -o coverage/report.html
 
 lint: ## Lint source code
 	@clear
-	golangci-lint run --color=always --config=.golangci.yml *.go
+	golangci-lint run --color=always --config=.golangci.yml ./...
 
 ########################################################################################################################
 
@@ -69,16 +64,8 @@ docker-tests:
 	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint make golang:1.18 tests
 
 docker-coverage:
-	docker run --rm -it -v $$(pwd):/src -w /src --env-file=.env --entrypoint make golang:1.18 coverage
+	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint make golang:1.18 coverage
 	@echo "Read report at file://$$(pwd)/coverage/report.html"
 
 docker-benchmarks:
 	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint make golang:1.18 benchmarks
-
-docker-profiling:
-	docker run --rm -it -v $$(pwd):/src -w /src --entrypoint sh golang:1.18 -c "apt-get update && apt-get install -y graphviz && make profiling"
-	@echo "Look at file://$$(pwd)/coverage/cpu.svg"
-	@echo "Look at file://$$(pwd)/coverage/mem.svg"
-
-docker-vendor:
-	docker run --rm -it -v $$(pwd):/src -w /src --env-file=.env --entrypoint go golang:1.18 mod vendor

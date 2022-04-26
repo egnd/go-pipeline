@@ -1,37 +1,49 @@
 package wpool_test
 
 import (
-	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/egnd/go-wpool"
+	"github.com/egnd/go-wpool/v2"
+	"github.com/egnd/go-wpool/v2/interfaces"
+	"github.com/rs/zerolog"
 )
 
-func benchPool(cfg wpool.PoolCfg, b *testing.B) {
-	ctx := context.Background()
-	pool := wpool.NewPool(cfg, func(num uint, pipeline chan wpool.IWorker) wpool.IWorker {
-		return wpool.NewWorker(ctx, wpool.WorkerCfg{
-			Pipeline: pipeline,
-			TaskTTL:  5 * time.Millisecond,
-		})
-	})
+type SomeTask struct {
+	wg    *sync.WaitGroup
+	delay time.Duration
+	id    string
+}
+
+func (t *SomeTask) GetID() string { return t.id }
+
+func (t *SomeTask) Do() {
+	defer t.wg.Done()
+	if t.delay > 0 {
+		time.Sleep(t.delay)
+	}
+}
+
+func benchPipelinePool(workerCnt int, delay time.Duration, b *testing.B) {
+	pipeline := make(chan interfaces.Worker)
+	logger := wpool.NewZerologAdapter(zerolog.Nop())
+
+	pool := wpool.NewPipelinePool(pipeline, logger)
 	defer pool.Close()
 
+	for i := 0; i < workerCnt; i++ {
+		pool.AddWorker(wpool.NewPipelineWorker(pipeline))
+	}
+
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
 		wg.Add(1)
-		if err := pool.Add(&wpool.Task{Callback: func(ctx context.Context) {
-			defer wg.Done()
 
-			select {
-			case <-time.After(time.Millisecond):
-				return
-			case <-ctx.Done():
-				return
-			}
-		}}); err != nil {
+		if err := pool.AddTask(
+			&SomeTask{&wg, delay, "task" + fmt.Sprint(i)},
+		); err != nil {
 			b.Error(err)
 			break
 		}
@@ -39,24 +51,23 @@ func benchPool(cfg wpool.PoolCfg, b *testing.B) {
 	wg.Wait()
 }
 
-func benchWorker(cfg wpool.WorkerCfg, b *testing.B) {
-	ctx := context.Background()
-	worker := wpool.NewWorker(ctx, cfg)
-	defer worker.Close()
+func benchStickyPool(workerCnt int, workerSize int, delay time.Duration, b *testing.B) {
+	logger := wpool.NewZerologAdapter(zerolog.Nop())
+
+	pool := wpool.NewStickyPool(logger)
+	defer pool.Close()
+
+	for i := 0; i < workerCnt; i++ {
+		pool.AddWorker(wpool.NewWorker(workerSize))
+	}
 
 	var wg sync.WaitGroup
 	for i := 0; i < b.N; i++ {
 		wg.Add(1)
-		if err := worker.Do(&wpool.Task{Callback: func(ctx context.Context) {
-			defer wg.Done()
 
-			select {
-			case <-time.After(time.Millisecond):
-				return
-			case <-ctx.Done():
-				return
-			}
-		}}); err != nil {
+		if err := pool.AddTask(
+			&SomeTask{&wg, delay, "task" + fmt.Sprint(i)},
+		); err != nil {
 			b.Error(err)
 			break
 		}
@@ -64,30 +75,26 @@ func benchWorker(cfg wpool.WorkerCfg, b *testing.B) {
 	wg.Wait()
 }
 
-func Benchmark_Pool_Workers10_Buff100(b *testing.B) {
-	benchPool(wpool.PoolCfg{WorkersCnt: 10, TasksBufSize: 100}, b)
+func Benchmark_PPool_Threads1(b *testing.B) {
+	benchPipelinePool(1, 10*time.Millisecond, b)
 }
 
-func Benchmark_Pool_Workers1_Buff100(b *testing.B) {
-	benchPool(wpool.PoolCfg{WorkersCnt: 1, TasksBufSize: 100}, b)
+func Benchmark_PPool_Threads10(b *testing.B) {
+	benchPipelinePool(10, 10*time.Millisecond, b)
 }
 
-func Benchmark_Pool_Workers10_Buff0(b *testing.B) {
-	benchPool(wpool.PoolCfg{WorkersCnt: 10}, b)
+func Benchmark_SPool_Threads1_WSize1(b *testing.B) {
+	benchStickyPool(1, 1, 10*time.Millisecond, b)
 }
 
-func Benchmark_Pool_Workers1_Buff0(b *testing.B) {
-	benchPool(wpool.PoolCfg{WorkersCnt: 1}, b)
+func Benchmark_SPool_Threads1_WSize10(b *testing.B) {
+	benchStickyPool(1, 10, 10*time.Millisecond, b)
 }
 
-func Benchmark_Worker_Buf0(b *testing.B) {
-	benchWorker(wpool.WorkerCfg{TasksChanBuff: 0}, b)
+func Benchmark_SPool_Threads10_WSize1(b *testing.B) {
+	benchStickyPool(10, 1, 10*time.Millisecond, b)
 }
 
-func Benchmark_Worker_Buf1(b *testing.B) {
-	benchWorker(wpool.WorkerCfg{TasksChanBuff: 1}, b)
-}
-
-func Benchmark_Worker_Buf10(b *testing.B) {
-	benchWorker(wpool.WorkerCfg{TasksChanBuff: 10}, b)
+func Benchmark_SPool_Threads10_WSize100(b *testing.B) {
+	benchStickyPool(10, 10, 10*time.Millisecond, b)
 }
