@@ -21,18 +21,18 @@ import (
 )
 
 func main() {
-    // create pipeline and pool
-    pipeline := make(chan interfaces.Worker)
+	// create pipeline and pool
+	pipeline := make(chan interfaces.Worker)
 	pool := wpool.NewPipelinePool(pipeline, 
-        wpool.NewZerologAdapter(zerolog.New()),
-    )
+		wpool.NewZerologAdapter(zerolog.New()),
+	)
 	defer pool.Close()
 
-    // add few workers
+	// add few workers
 	pool.AddWorker(wpool.NewPipelineWorker(pipeline))
-    pool.AddWorker(wpool.NewPipelineWorker(pipeline))
+	pool.AddWorker(wpool.NewPipelineWorker(pipeline))
 
-    // put some tasks to pool
+	// put some tasks to pool
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
@@ -41,7 +41,7 @@ func main() {
 		}
 	}
 
-    // wait for tasks to be completed
+	// wait for tasks to be completed
 	wg.Wait()
 }
 ```
@@ -60,16 +60,16 @@ import (
 )
 
 func main() {
-    // create pool
-    pool := wpool.NewStickyPool(
-        wpool.NewZerologAdapter(zerolog.Nop())
-    )
+	// create pool
+	pool := wpool.NewStickyPool(
+		wpool.NewZerologAdapter(zerolog.Nop())
+	)
 	defer pool.Close()
 
-    // add few workers
-    buffSize := 100
+	// add few workers
+	buffSize := 100
 	pool.AddWorker(wpool.NewWorker(buffSize))
-    pool.AddWorker(wpool.NewWorker(buffSize))
+	pool.AddWorker(wpool.NewWorker(buffSize))
 
 	// put some tasks to pool
 	var wg sync.WaitGroup
@@ -80,7 +80,7 @@ func main() {
 		}
 	}
 
-    // wait for tasks to be completed
+	// wait for tasks to be completed
 	wg.Wait()
 }
 ```
