@@ -41,7 +41,6 @@ tests: ## Run unit tests
 	CGO_ENABLED=1 go test -mod=vendor -race -cover -covermode=atomic -coverprofile=profiles/cover.out.tmp ./...
 
 benchmarks: ## Run benchmarks
-	@clear
 	go test -mod=vendor -benchmem -bench . ./...
 
 coverage: tests ## Check code coveragem
@@ -50,7 +49,6 @@ coverage: tests ## Check code coveragem
 	go tool cover -html=profiles/cover.out -o profiles/report.html
 
 lint: ## Lint source code
-	@clear
 	golangci-lint run --color=always --config=.golangci.yml ./...
 
 profiles:
