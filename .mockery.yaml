@@ -1,5 +1,3 @@
 quiet: false
-all: true
 case: underscore
-inpackage: true
-dir: interfaces
+recursive: false
