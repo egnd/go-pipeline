@@ -5,7 +5,7 @@
 [![Coverage](https://gocover.io/_badge/github.com/egnd/go-pipeline)](https://gocover.io/github.com/egnd/go-pipeline)
 [![Pipeline](https://github.com/egnd/go-pipeline/actions/workflows/pipeline.yml/badge.svg)](https://github.com/egnd/go-pipeline/actions?query=workflow%3APipeline)
 
-Golang package for making a pool of workers.
+Golang package for parallel execution of tasks.
 
 ### Pool:
 Common Pool of Workers. The Task is taken into work by the first released Worker.
