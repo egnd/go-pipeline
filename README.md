@@ -7,43 +7,41 @@
 
 Golang package for parallel execution of tasks.
 
-### Pool:
+### BusPool:
 Common Pool of Workers. The Task is taken into work by the first released Worker.
 ```golang
 package main
 
 import (
-	"log"
 	"sync"
 
-	"github.com/egnd/go-pipeline"
-	"github.com/egnd/go-pipeline/pool"
+	"github.com/egnd/go-pipeline/decorators"
+	"github.com/egnd/go-pipeline/pools"
+	"github.com/egnd/go-pipeline/tasks"
+	"github.com/rs/zerolog"
 )
 
 func main() {
-	// create notifications channel
-	notifier := make(chan pipeline.Doer)
-
 	// create pool
-	pipe := pool.NewPool(notifier,
-		// create and register workers
-		pool.NewWorker(notifier),
-		// also it is possible to add some middlewares at tasks execution
-		pool.NewWorker(notifier, func(next pipeline.Tasker) pipeline.Tasker {
-			return func(task pipeline.Task) error {
-				if err := next(task); err != nil {
-					log.Println(err)
-				}
-				return nil
-			}
-		}),
+	pipe := pools.NewBusPool(
+		2,  // set parallel threads count
+		10, // set tasks queue size
+		// add some task decorators:
+		decorators.LogErrorZero(zerolog.Nop()), // log tasks errors
+		decorators.CatchPanic,                  // convert tasks panics to errors
 	)
 
 	// start producing tasks to pool
 	var wg sync.WaitGroup
-	pipe.Push(NewTask(&wg))
-	pipe.Push(NewTask(&wg))
-	pipe.Push(NewTask(&wg))
+	pipe.Push(tasks.NewFunc("testid", func() error {
+		defer wg.Done()
+		return nil
+	}))
+	pipe.Push(tasks.NewFunc("testid", func() error {
+		defer wg.Done()
+		return nil
+	}))
+
 	wg.Wait()
 
 	// close pool
@@ -51,45 +49,45 @@ func main() {
 		panic(err)
 	}
 }
-
 ```
 
-### Hashing pool:
-A Pool of Workers, but Tasks with the same ID will be processed by the same worker.
+### HashPool:
+Worker pool, which allows you to change the strategy for assigning Tasks to Workers.
 ```golang
 package main
 
 import (
-	"log"
 	"sync"
 
-	"github.com/egnd/go-pipeline"
-	"github.com/egnd/go-pipeline/hashpool"
+	"github.com/egnd/go-pipeline/assign"
+	"github.com/egnd/go-pipeline/decorators"
+	"github.com/egnd/go-pipeline/pools"
+	"github.com/egnd/go-pipeline/tasks"
+	"github.com/rs/zerolog"
 )
 
 func main() {
 	// create pool
-	pipe := hashpool.NewPool(
-		// define task's ID hashing func
-		hashpool.DefaultHasher,
-		// create and register workers
-		hashpool.NewWorker(queueSize),
-		// also it is possible to add some middlewares at tasks execution
-		hashpool.NewWorker(queueSize, func(next pipeline.Tasker) pipeline.Tasker {
-			return func(task pipeline.Task) error {
-				if err := next(task); err != nil {
-					log.Println(err)
-				}
-				return nil
-			}
-		}),
+	pipe := pools.NewHashPool(
+		2,             // set parallel threads count
+		10,            // set tasks queue size
+		assign.Sticky, // choose tasks to workers assignment method
+		// add some task decorators:
+		decorators.LogErrorZero(zerolog.Nop()), // log tasks errors
+		decorators.CatchPanic,                  // convert tasks panics to errors
 	)
 
 	// start producing tasks to pool
 	var wg sync.WaitGroup
-	pipe.Push(NewTask(&wg))
-	pipe.Push(NewTask(&wg))
-	pipe.Push(NewTask(&wg))
+	pipe.Push(tasks.NewFunc("testid", func() error {
+		defer wg.Done()
+		return nil
+	}))
+	pipe.Push(tasks.NewFunc("testid", func() error {
+		defer wg.Done()
+		return nil
+	}))
+
 	wg.Wait()
 
 	// close pool
@@ -97,7 +95,6 @@ func main() {
 		panic(err)
 	}
 }
-
 ```
 
 ### Semaphore:
@@ -106,32 +103,33 @@ Primitive for limiting the number of threads for the Tasks parallel execution.
 package main
 
 import (
-	"log"
 	"sync"
 
-	"github.com/egnd/go-pipeline"
-	"github.com/egnd/go-pipeline/semaphore"
+	"github.com/egnd/go-pipeline/decorators"
+	"github.com/egnd/go-pipeline/pools"
+	"github.com/egnd/go-pipeline/tasks"
+	"github.com/rs/zerolog"
 )
 
 func main() {
-	// create semaphore
-	pipe := semaphore.NewSemaphore(threadsCount,
-		// it is possible to add some middlewares at tasks execution
-		func(next pipeline.Tasker) pipeline.Tasker {
-			return func(task pipeline.Task) error {
-				if err := next(task); err != nil {
-					log.Println(err)
-				}
-				return nil
-			}
-		},
+	// create pool
+	pipe := pools.NewSemaphore(2, // set parallel threads count
+		// add some task decorators:
+		decorators.LogErrorZero(zerolog.Nop()), // log tasks errors
+		decorators.CatchPanic,                  // convert tasks panics to errors
 	)
 
 	// start producing tasks to pool
 	var wg sync.WaitGroup
-	pipe.Push(NewTask(&wg))
-	pipe.Push(NewTask(&wg))
-	pipe.Push(NewTask(&wg))
+	pipe.Push(tasks.NewFunc("testid", func() error {
+		defer wg.Done()
+		return nil
+	}))
+	pipe.Push(tasks.NewFunc("testid", func() error {
+		defer wg.Done()
+		return nil
+	}))
+
 	wg.Wait()
 
 	// close pool
@@ -139,5 +137,4 @@ func main() {
 		panic(err)
 	}
 }
-
 ```
