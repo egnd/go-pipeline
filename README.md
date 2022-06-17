@@ -7,132 +7,67 @@
 
 Golang package for parallel execution of tasks.
 
-### BusPool:
-Common Pool of Workers. The Task is taken into work by the first released Worker.
+### Pools types:
+* BusPool: Common Pool of Workers. The Task is taken into work by the first released Worker.
+* HashPool: Worker pool, which allows you to change the strategy for assigning Tasks to Workers.
+* Semaphore: Primitive for limiting the number of threads for the Tasks parallel execution.
+
+### Examples:
 ```golang
 package main
 
 import (
+	"fmt"
 	"sync"
 
-	"github.com/egnd/go-pipeline/decorators"
-	"github.com/egnd/go-pipeline/pools"
-	"github.com/egnd/go-pipeline/tasks"
 	"github.com/rs/zerolog"
-)
-
-func main() {
-	// create pool
-	pipe := pools.NewBusPool(
-		2,  // set parallel threads count
-		10, // set tasks queue size
-		// add some task decorators:
-		decorators.LogErrorZero(zerolog.Nop()), // log tasks errors
-		decorators.CatchPanic,                  // convert tasks panics to errors
-	)
-
-	// start producing tasks to pool
-	var wg sync.WaitGroup
-	pipe.Push(tasks.NewFunc("testid", func() error {
-		defer wg.Done()
-		return nil
-	}))
-	pipe.Push(tasks.NewFunc("testid", func() error {
-		defer wg.Done()
-		return nil
-	}))
-
-	wg.Wait()
-
-	// close pool
-	if err := pipe.Close(); err != nil {
-		panic(err)
-	}
-}
-```
-
-### HashPool:
-Worker pool, which allows you to change the strategy for assigning Tasks to Workers.
-```golang
-package main
-
-import (
-	"sync"
+	"go.uber.org/zap"
 
 	"github.com/egnd/go-pipeline/assign"
 	"github.com/egnd/go-pipeline/decorators"
 	"github.com/egnd/go-pipeline/pools"
 	"github.com/egnd/go-pipeline/tasks"
-	"github.com/rs/zerolog"
 )
 
 func main() {
-	// create pool
+	// BusPool example:
+	pipe := pools.NewBusPool(
+		2,  // set parallel threads count
+		10, // set tasks queue size
+		// add some task decorators:
+		decorators.LogErrorZero(zerolog.Nop()), // log tasks errors with zerolog logger
+		decorators.CatchPanic,                  // convert tasks panics to errors
+	)
+
+	// HashPool example:
 	pipe := pools.NewHashPool(
 		2,             // set parallel threads count
 		10,            // set tasks queue size
 		assign.Sticky, // choose tasks to workers assignment method
 		// add some task decorators:
-		decorators.LogErrorZero(zerolog.Nop()), // log tasks errors
-		decorators.CatchPanic,                  // convert tasks panics to errors
+		decorators.LogErrorZap(zap.NewNop()), // log tasks errors with zap logger
+		decorators.CatchPanic,                // convert tasks panics to errors
 	)
 
-	// start producing tasks to pool
-	var wg sync.WaitGroup
-	pipe.Push(tasks.NewFunc("testid", func() error {
-		defer wg.Done()
-		return nil
-	}))
-	pipe.Push(tasks.NewFunc("testid", func() error {
-		defer wg.Done()
-		return nil
-	}))
-
-	wg.Wait()
-
-	// close pool
-	if err := pipe.Close(); err != nil {
-		panic(err)
-	}
-}
-```
-
-### Semaphore:
-Primitive for limiting the number of threads for the Tasks parallel execution.
-```golang
-package main
-
-import (
-	"sync"
-
-	"github.com/egnd/go-pipeline/decorators"
-	"github.com/egnd/go-pipeline/pools"
-	"github.com/egnd/go-pipeline/tasks"
-	"github.com/rs/zerolog"
-)
-
-func main() {
-	// create pool
+	// Semaphore example:
 	pipe := pools.NewSemaphore(2, // set parallel threads count
 		// add some task decorators:
-		decorators.LogErrorZero(zerolog.Nop()), // log tasks errors
-		decorators.CatchPanic,                  // convert tasks panics to errors
+		decorators.ThrowPanic, // convert tasks errors to panics
 	)
 
-	// start producing tasks to pool
+	// Send some tasks to pool
 	var wg sync.WaitGroup
-	pipe.Push(tasks.NewFunc("testid", func() error {
-		defer wg.Done()
-		return nil
-	}))
-	pipe.Push(tasks.NewFunc("testid", func() error {
-		defer wg.Done()
-		return nil
-	}))
+	for i := 0; i < 10; i++ {
+		pipe.Push(tasks.NewFunc("task#"+fmt.Sprint(i), func() error {
+			defer wg.Done()
+			return nil
+		}))
+	}
 
+	// Wait for task processing
 	wg.Wait()
 
-	// close pool
+	// Close pool
 	if err := pipe.Close(); err != nil {
 		panic(err)
 	}
