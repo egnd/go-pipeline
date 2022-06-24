@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/egnd/go-pipeline.svg)](https://pkg.go.dev/github.com/egnd/go-pipeline)
 [![Go Report Card](https://goreportcard.com/badge/github.com/egnd/go-pipeline)](https://goreportcard.com/report/github.com/egnd/go-pipeline)
-[![Coverage](https://gocover.io/_badge/github.com/egnd/go-pipeline?k2)](https://gocover.io/github.com/egnd/go-pipeline)
+[![Coverage](https://gocover.io/_badge/github.com/egnd/go-pipeline?k3)](https://gocover.io/github.com/egnd/go-pipeline)
 [![Pipeline](https://github.com/egnd/go-pipeline/actions/workflows/pipeline.yml/badge.svg)](https://github.com/egnd/go-pipeline/actions?query=workflow%3APipeline)
 
 Golang package for parallel execution of tasks.
