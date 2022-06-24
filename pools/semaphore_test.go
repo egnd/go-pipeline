@@ -31,7 +31,7 @@ func Test_Semaphore(t *testing.T) {
 
 	for k, test := range cases {
 		t.Run(fmt.Sprint(k+1), func(t *testing.T) {
-			pipe := pools.NewSemaphore(test.buffSize)
+			pipe := pools.NewSemaphore(test.buffSize, nil)
 
 			for _, task := range test.tasks {
 				task := task
@@ -39,13 +39,14 @@ func Test_Semaphore(t *testing.T) {
 				defer task.AssertExpectations(t)
 			}
 
+			pipe.Wait()
 			pipe.Close()
 		})
 	}
 }
 
 func Test_Semaphore_Errors(t *testing.T) {
-	pipe := pools.NewSemaphore(3)
+	pipe := pools.NewSemaphore(3, nil)
 	assert.NoError(t, pipe.Close())
 	assert.EqualError(t, pipe.Close(), "semaphore close err: close of closed channel")
 	assert.EqualError(t, pipe.Push(&mocks.Task{}), "semaphore do err: send on closed channel")

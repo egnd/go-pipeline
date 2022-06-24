@@ -3,7 +3,6 @@ package pipeline_test
 import (
 	"fmt"
 	"log"
-	"sync"
 	"testing"
 
 	"github.com/egnd/go-pipeline"
@@ -20,12 +19,7 @@ func Benchmark_BusPool(b *testing.B) {
 	for _, wCnt := range workCnt {
 		for _, bCnt := range buffCnt {
 			for _, dCnt := range decoratorsCnt {
-				var wg sync.WaitGroup
-
-				task := tasks.NewFunc("testid", func() error {
-					defer wg.Done()
-					return nil
-				})
+				task := tasks.NewFunc("testid", nil)
 
 				decorators := make([]pipeline.TaskDecorator, 0, dCnt)
 				for i := 0; i < dCnt; i++ {
@@ -33,15 +27,13 @@ func Benchmark_BusPool(b *testing.B) {
 				}
 
 				b.Run(fmt.Sprintf("w%d_b%d_d%d", wCnt, bCnt, dCnt), func(bb *testing.B) {
-					pipe := pools.NewBusPool(wCnt, bCnt, decorators...)
-
-					wg.Add(bb.N)
+					pipe := pools.NewBusPool(wCnt, bCnt, nil, decorators...)
 					for k := 0; k < bb.N; k++ {
 						if err := pipe.Push(task); err != nil {
 							bb.Error(err)
 						}
 					}
-					wg.Wait()
+					pipe.Wait()
 
 					if err := pipe.Close(); err != nil {
 						bb.Error(err)
@@ -60,12 +52,7 @@ func Benchmark_HashPool(b *testing.B) {
 	for _, wCnt := range workCnt {
 		for _, bCnt := range buffCnt {
 			for _, dCnt := range decoratorsCnt {
-				var wg sync.WaitGroup
-
-				task := tasks.NewFunc("testid", func() error {
-					defer wg.Done()
-					return nil
-				})
+				task := tasks.NewFunc("testid", nil)
 
 				decorators := make([]pipeline.TaskDecorator, 0, dCnt)
 				for i := 0; i < dCnt; i++ {
@@ -73,15 +60,13 @@ func Benchmark_HashPool(b *testing.B) {
 				}
 
 				b.Run(fmt.Sprintf("w%d_b%d_d%d", wCnt, bCnt, dCnt), func(bb *testing.B) {
-					pipe := pools.NewHashPool(wCnt, bCnt, assign.Random, decorators...)
-
-					wg.Add(bb.N)
+					pipe := pools.NewHashPool(wCnt, bCnt, nil, assign.Random, decorators...)
 					for k := 0; k < bb.N; k++ {
 						if err := pipe.Push(task); err != nil {
 							bb.Error(err)
 						}
 					}
-					wg.Wait()
+					pipe.Wait()
 
 					if err := pipe.Close(); err != nil {
 						bb.Error(err)
@@ -98,12 +83,7 @@ func Benchmark_Semaphore(b *testing.B) {
 
 	for _, wCnt := range workCnt {
 		for _, dCnt := range decoratorsCnt {
-			var wg sync.WaitGroup
-
-			task := tasks.NewFunc("testid", func() error {
-				defer wg.Done()
-				return nil
-			})
+			task := tasks.NewFunc("testid", nil)
 
 			decorators := make([]pipeline.TaskDecorator, 0, dCnt)
 			for i := 0; i < dCnt; i++ {
@@ -111,15 +91,13 @@ func Benchmark_Semaphore(b *testing.B) {
 			}
 
 			b.Run(fmt.Sprintf("w%d_d%d", wCnt, dCnt), func(bb *testing.B) {
-				pipe := pools.NewSemaphore(wCnt, decorators...)
-
-				wg.Add(bb.N)
+				pipe := pools.NewSemaphore(wCnt, nil, decorators...)
 				for k := 0; k < bb.N; k++ {
 					if err := pipe.Push(task); err != nil {
 						bb.Error(err)
 					}
 				}
-				wg.Wait()
+				pipe.Wait()
 
 				if err := pipe.Close(); err != nil {
 					bb.Error(err)
