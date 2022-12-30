@@ -5,6 +5,8 @@
 [![Coverage](https://gocover.io/_badge/github.com/egnd/go-pipeline?k3)](https://gocover.io/github.com/egnd/go-pipeline)
 [![Pipeline](https://github.com/egnd/go-pipeline/actions/workflows/pipeline.yml/badge.svg)](https://github.com/egnd/go-pipeline/actions?query=workflow%3APipeline)
 
+DEPRECATED use https://github.com/egnd/go-toolbox/tree/master/pipelines instead
+
 Golang package for parallel execution of tasks.
 
 ### Pools types:
